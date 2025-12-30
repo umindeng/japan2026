@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 北陸冬遊親子規劃 旗艦版 V17</title>
+    <!-- 載入外部資源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* 捲動行為與補償 */
+        html { scroll-behavior: smooth; }
+        section { scroll-margin-top: 5rem; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F8FAFC; color: #0F172A; }
+        
+        /* 13天行程卡片對比底色 */
+        .day-card-blue { background-color: #DBEAFE; border-left: 10px solid #1D4ED8; }
+        .day-card-orange { background-color: #FFEDD5; border-left: 10px solid #EA580C; }
+        .day-card-green { background-color: #DCFCE7; border-left: 10px solid #15803D; }
+        .day-card-pink { background-color: #FCE7F3; border-left: 10px solid #BE185D; }
+        
+        /* 標籤與文字 */
+        .ticket-box { background: #FFFFFF; border: 2px solid #1E293B; color: #1E293B; padding: 2px 10px; border-radius: 99px; font-weight: 900; font-size: 0.75rem; }
+        .timeline-line { position: absolute; left: 1.75rem; top: 0; bottom: 0; width: 4px; background: #E2E8F0; z-index: 0; }
+        .desc-text { color: #1F2937; line-height: 1.8; text-align: justify; font-weight: 500; font-size: 0.95rem; }
+
+        /* 攻略圖框架 */
+        .map-frame { position: relative; overflow: hidden; border-radius: 2.5rem; border: 6px solid white; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2); background-color: #E2E8F0; cursor: zoom-in; }
+        .map-img { width: 100%; height: auto; transition: transform 0.6s ease; display: block; }
+        .map-frame:hover .map-img { transform: scale(1.08); }
+        
+        /* 燈箱 Lightbox */
+        #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out; }
+        #lightbox img { max-width: 95%; max-height: 90%; border-radius: 12px; box-shadow: 0 0 60px rgba(255,255,255,0.2); }
+
+        .nav-link { cursor: pointer; transition: all 0.3s; border-bottom: 3px solid transparent; font-weight: 900; }
+        .nav-link:hover { color: #1E40AF; border-bottom-color: #1E40AF; }
+        
+        .img-fallback { padding: 40px; text-align: center; background: #f1f5f9; border-radius: 2rem; color: #94a3b8; font-weight: bold; }
+        
+        .filter-active { background-color: #1D4ED8 !important; color: white !important; }
+    </style>
+
+    <script>
+        // 圖片錯誤處理
+        function showFallback(imgElement, title) {
+            const parent = imgElement.parentElement;
+            const fallbackDiv = document.createElement('div');
+            fallbackDiv.className = 'img-fallback';
+            fallbackDiv.innerHTML = `<i class="fa-solid fa-file-image text-4xl mb-4 opacity-30"></i><p>${title}<br><span class='text-xs font-normal'>檢查檔案 ${imgElement.getAttribute('src')}</span></p>`;
+            parent.appendChild(fallbackDiv);
+            imgElement.style.display = 'none';
+        }
+
+        // 燈箱控制
+        function openLightbox(src) {
+            const lb = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            lb.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // 精確跳轉邏輯
+        function scrollToSection(event, id) {
+            if (event) event.preventDefault();
+            const element = document.getElementById(id);
+            if (element) {
+                const headerOffset = 90; 
+                const elementPosition = element.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
+                });
+            }
+        }
+    </script>
+</head>
+<body class="antialiased">
+
+    <!-- Lightbox -->
+    <div id="lightbox" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="放大攻略圖">
+        <p class="absolute bottom-6 text-white font-black tracking-widest bg-black/60 px-6 py-2 rounded-full">點擊任何地方關閉</p>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full bg-white/95 backdrop-blur-md z-50 border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-snowflake text-blue-700 text-2xl"></i>
+                <span class="font-black text-xl text-blue-900 tracking-tighter">北陸親子冬遊 V17</span>
+            </div>
+            <div class="hidden lg:flex gap-6 text-slate-700">
+                <span onclick="scrollToSection(event, 'gallery')" class="nav-link py-1">攻略圖</span>
+                <span onclick="scrollToSection(event, 'overview')" class="nav-link py-1">分析</span>
+                <span onclick="scrollToSection(event, 'itinerary')" class="nav-link py-1">每日行程</span>
+                <span onclick="scrollToSection(event, 'food')" class="nav-link py-1">美食地圖</span>
+                <span onclick="scrollToSection(event, 'stay')" class="nav-link py-1">交通住宿</span>
+                <span onclick="scrollToSection(event, 'video')" class="nav-link py-1">影音攻略</span>
+            </div>
+            <div class="bg-blue-800 text-white px-5 py-2 rounded-full text-xs font-black shadow-md">
+                1/16 - 1/28 冒險啟程
+            </div>
+        </div>
+    </nav>
+
+    <!-- Section 1: Gallery -->
+    <section id="gallery" class="pt-28 pb-12 px-4 max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+            <h1 class="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight">日式插畫攻略圖</h1>
+            <p class="text-slate-500 font-bold italic mt-4 text-lg">點擊圖片即可放大查看精美細節。</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-slate-800">
+            <div class="map-frame group" onclick="openLightbox('Gemini_Generated_Image_1.webp')">
+                <img src="Gemini_Generated_Image_1.webp" class="map-img" alt="1. 名古屋攻略" onerror="showFallback(this, '插圖 1: 名古屋攻略')">
+                <div class="bg-white p-4 text-center font-black border-t border-slate-100 italic group-hover:text-blue-700 transition">1. 名古屋周邊旅遊攻略</div>
+            </div>
+            <div class="map-frame group" onclick="openLightbox('Gemini_Generated_Image_2.webp')">
+                <img src="Gemini_Generated_Image_2.webp" class="map-img" alt="2. 金澤與高岡攻略" onerror="showFallback(this, '插圖 2: 金澤與高岡攻略')">
+                <div class="bg-white p-4 text-center font-black border-t border-slate-100 italic group-hover:text-blue-700 transition">2. 金澤與高岡攻略地圖</div>
+            </div>
+            <div class="map-frame group" onclick="openLightbox('Gemini_Generated_Image_3.webp')">
+                <img src="Gemini_Generated_Image_3.webp" class="map-img" alt="3. 高山與合掌村攻略" onerror="showFallback(this, '插圖 3: 高山與合掌村攻略')">
+                <div class="bg-white p-4 text-center font-black border-t border-slate-100 italic group-hover:text-blue-700 transition">3. 高山與合掌村攻略地圖</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2: Dashboard & Flights -->
+    <section id="overview" class="py-12 px-4 max-w-7xl mx-auto border-t border-slate-100">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="bg-blue-900 text-white p-8 rounded-[3rem] shadow-xl">
+                <h3 class="font-black text-2xl mb-6 flex items-center gap-3 text-blue-200"><i class="fa-solid fa-plane-departure"></i> 航班快報</h3>
+                <div class="space-y-6">
+                    <div class="border-l-4 border-blue-400 pl-4">
+                        <p class="text-xs font-bold text-blue-300">1/16 CI150</p>
+                        <p class="text-xl font-black">17:15 桃園 ➔ 20:50 名古屋</p>
+                    </div>
+                    <div class="border-l-4 border-emerald-400 pl-4">
+                        <p class="text-xs font-bold text-emerald-300">1/28 CI151</p>
+                        <p class="text-xl font-black">09:50 名古屋 ➔ 12:15 桃園</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+                <h3 class="font-black text-lg mb-4 text-blue-800"><i class="fa-solid fa-chart-pie"></i> 行程分佈</h3>
+                <div class="h-48 relative"><canvas id="typeChart"></canvas></div>
+            </div>
+            <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+                <h3 class="font-black text-lg mb-4 text-blue-800"><i class="fa-solid fa-coins"></i> 預估餐費</h3>
+                <div class="h-48 relative"><canvas id="budgetChart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Itinerary -->
+    <section id="itinerary" class="py-20 px-4 max-w-5xl mx-auto">
+        <h2 class="text-4xl md:text-5xl font-black mb-16 text-slate-900 border-l-[16px] border-blue-800 pl-8">13日行程深度詳解</h2>
+        <div class="relative space-y-24" id="itinerary-grid">
+            <div class="timeline-line"></div>
+            <!-- Daily Content -->
+        </div>
+    </section>
+
+    <!-- Section 4: Food Map (30+ 餐廳與多重篩選) -->
+    <section id="food" class="py-24 px-4 bg-slate-950 text-white scroll-mt-20">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+                <div>
+                    <h2 class="text-4xl font-black mb-4 text-blue-400">美食預算導航 (30+ 家)</h2>
+                    <p class="text-slate-400 font-bold text-lg text-slate-800 bg-white inline-block px-3 rounded">人均費用預估</p>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex flex-wrap gap-2 justify-end" id="region-filters">
+                        <button onclick="filterRegion('all')" class="region-btn filter-active px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">全部區域</button>
+                        <button onclick="filterRegion('nagoya')" class="region-btn px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">名古屋</button>
+                        <button onclick="filterRegion('takayama')" class="region-btn px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">高山</button>
+                        <button onclick="filterRegion('kanazawa')" class="region-btn px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">金澤/富山</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 justify-end" id="cate-filters">
+                        <button onclick="filterCate('all')" class="cate-btn filter-active px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">全部種類</button>
+                        <button onclick="filterCate('meal')" class="cate-btn px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">正餐</button>
+                        <button onclick="filterCate('snack')" class="cate-btn px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">小吃</button>
+                        <button onclick="filterCate('dessert')" class="cate-btn px-4 py-1.5 rounded-full border border-slate-700 text-xs font-black">甜點</button>
+                    </div>
+                </div>
+            </div>
+            <div id="food-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-slate-900">
+                <!-- Food items -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5: Stay & Rental -->
+    <section id="stay" class="py-24 px-4 max-w-7xl mx-auto">
+        <h2 class="text-3xl font-black text-slate-900 mb-12 border-l-8 border-amber-600 pl-4">住宿通訊與租車資料</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div class="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-200">
+                <h3 class="text-2xl font-black mb-8 flex items-center gap-3 text-blue-900"><i class="fa-solid fa-hotel"></i> 飯店詳細通訊錄</h3>
+                <div class="space-y-6" id="stay-list"></div>
+            </div>
+            <div class="flex flex-col gap-8">
+                <div class="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl">
+                    <h3 class="text-2xl font-black mb-8 flex items-center gap-3 text-amber-400"><i class="fa-solid fa-car-side"></i> 租車預約資訊</h3>
+                    <div class="space-y-8">
+                        <div class="bg-white/10 p-5 rounded-3xl border border-white/10">
+                            <h4 class="font-black text-blue-300 text-lg mb-2">Orix Rent a Car 中部國際機場店</h4>
+                            <p class="text-xs mb-3 opacity-80">常滑市セントレア1-1 | 08:00～20:00</p>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div><span class="text-blue-200">取車：</span>1/17 10:00</div>
+                                <div><span class="text-blue-200">還車：</span>1/22 19:30</div>
+                            </div>
+                        </div>
+                        <div class="bg-white/10 p-5 rounded-3xl border border-white/10">
+                            <h4 class="font-black text-emerald-300 text-lg mb-2">TOYOTA 租車公司 中部國際機場</h4>
+                            <p class="text-xs mb-3 opacity-80">常滑市セントレア1-1 | 0569-38-0100</p>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div><span class="text-emerald-200">取車：</span>1/22 19:30</div>
+                                <div><span class="text-emerald-200">還車：</span>1/27 19:30</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-100 p-8 rounded-[3rem] flex flex-col gap-4">
+                    <h3 class="font-black text-blue-900 text-xl">路況與天氣快速連線</h3>
+                    <div class="flex gap-3">
+                        <a href="https://www.jartic.or.jp/" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md">JARTIC 路況</a>
+                        <a href="https://weather.yahoo.co.jp/weather/jp/21/5220.html" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md">Yahoo! 氣象</a>
+                        <a href="https://ihighway.jp/pcsite/map/?area=area04" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md">iHighway 道路圖</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 6: Videos -->
+    <section id="video" class="py-24 px-4 bg-white border-t border-slate-100">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-black mb-4 text-slate-900">精選 10 部旅遊攻略影音</h2>
+                <p class="text-slate-500 font-bold italic text-xl">採用有效 YouTube 連結，點擊即可預習精彩內容。</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10" id="yt-grid"></div>
+        </div>
+    </section>
+
+    <footer class="py-16 bg-slate-900 text-center text-slate-500">
+        <p class="font-black text-sm tracking-widest uppercase italic">2026 NORTH LAND ADVENTURE | V17 FINAL</p>
+    </footer>
+
+    <script>
+        // --- DATA ---
+        let currentRegion = 'all';
+        let currentCate = 'all';
+
+        const dayData = [
+            { day: 1, date: "1/16 (五)", title: "抵達中部空港", style: "day-card-blue", spots: [
+                { name: "CI150 抵達名古屋 (20:50)", time: "20:50", price: "免費", desc: "帶著全家人的期待抵達名古屋。出關後請準備好 Visit Japan Web QR Code。東橫INN 飯店就在交通廣場對面，步行只需 5 分鐘，是長途飛行後最好的休息選擇。", map: "https://www.google.com/maps/search/?api=1&query=Chubu+Centrair+International+Airport" },
+                { name: "機場超商宵夜補給", time: "21:30", price: "自行花費", desc: "入境後機場商店多已打烊，可至飯店旁的超商採買冬季限定飲品與宵夜。超商的牛奶與濃厚布丁是開啟日本之夜的首選，別忘了買簡易早餐，為明日自駕暖身。", map: "https://www.google.com/maps/search/?api=1&query=FamilyMart+Centrair+Airport" },
+                { name: "飯店辦理入住休息", time: "22:00", price: "免費", desc: "入宿東橫INN 中部國際機場。這間飯店與航廈直接連結，極度適合親子。早點休息，因為明早 10:00 需要領車開啟長途移動。飯店大廳提供免費秤重器。", map: "https://www.google.com/maps/search/?api=1&query=Toyoko+Inn+Chubu+International+Airport" },
+                { name: "預備：自駕路線確認", time: "22:30", price: "免費", desc: "睡前利用飯店 WiFi 再次確認明早取車的櫃台位置。領車處位於機場航廈正對面的交通廣場 2 樓。確認明早前往高山的天氣狀況，這是趟深度冬之旅的起點。", map: "https://ihighway.jp/pcsite/map/?area=area04" }
+            ]},
+            { day: 2, date: "1/17 (六)", title: "自駕啟程與雪裝採買", style: "day-card-orange", spots: [
+                { name: "取車 (4WD+雪胎)", time: "10:00", price: "預約制", desc: "領車時請務必仔細檢查雪胎與兒童座椅。確認 4WD 配置，雪季駕駛安全第一。請員工將導航設定為中文面。確認備用除雪刷位置。", map: "https://www.google.com/maps/search/?api=1&query=Orix+Rent+a+Car+Centrair" },
+                { name: "AEON Mall 常滑採買", time: "11:00", price: "自行花費", desc: "進山前的補給點。在 Uniqlo 購買發熱衣，運動店買防滑雪靴。AEON 有巨大招財貓可拍。午餐推薦名產炸雞，享受旅行採買樂趣。", map: "https://www.google.com/maps/search/?api=1&query=AEON+MALL+Tokoname" },
+                { name: "瓢岳 PA 休息站", time: "14:30", price: "自行花費", desc: "前往高山中繼。購買特色點心，欣賞氣溫下降後的雪國氛圍。長途雪地開車每 1.5 小時務必休息。在此可調整視力對雪地的反光感。", map: "https://www.google.com/maps/search/?api=1&query=Fukube+Parking+Area" },
+                { name: "高山老街飛驒牛晚餐", time: "17:30", price: "自行花費", desc: "入住高山八兵衛。漫步老街紅橋。晚餐預約丸明燒肉，享受入口即化頂級飛驒牛。雪中古宅燈火搖曳，這是親子行最奢華的味覺開場。", map: "https://www.google.com/maps/search/?api=1&query=Maruaki+Takayama" }
+            ]},
+            { day: 3, date: "1/18 (日)", title: "朝市風情與合掌村", style: "day-card-green", spots: [
+                { name: "宮川朝市體驗", time: "09:00", price: "免費", desc: "三大朝市。販售農產與工藝。買顆現削蘋果在雪中享用。這是觀察高山傳統建築與當地脈絡的最佳場所，親子散步氛圍溫馨。", map: "https://www.google.com/maps/search/?api=1&query=Miyagawa+Morning+Market" },
+                { name: "高山陣屋 (古官府)", time: "11:00", price: "大人 ¥440 / 學生 免費", desc: "日本唯一完整保存郡代役所。建築壯麗具深度。冬天地板冷請穿厚襪。室內雪庭極具禪意，適合讓小孩了解日本官場文化。", map: "https://www.google.com/maps/search/?api=1&query=Takayama+Jinya" },
+                { name: "世界遺產：白川鄉合掌村", time: "13:30", price: "大 ¥1,000 / 小 ¥500", desc: "冬季必訪！三角屋頂在雪中像薑餅屋。搭接駁車上展望台俯瞰全景。小孩可在屋前玩雪，參觀內部驚嘆古人智慧。", map: "https://www.google.com/maps/search/?api=1&query=Shirakawa-go" },
+                { name: "抵達金澤 / 鼓門夜景", time: "17:00", price: "免費", desc: "離開白川鄉拉車一小時至金澤。車站「鼓門」夜間亮燈非常壯觀。晚餐可在 FORUS 百貨享用美食。夜晚金澤氛圍極佳。", map: "https://www.google.com/maps/search/?api=1&query=Kanazawa+Station+Tsuzumi-mon+Gate" }
+            ]},
+            { day: 4, date: "1/19 (一)", title: "金澤名園美學一日", style: "day-card-pink", spots: [
+                { name: "兼六園 (日本三名園)", time: "09:00", price: "大人 ¥320 / 小孩 ¥100", desc: "迴遊式庭園巔峰。雪季限定「雪吊」結構是絕佳攝影點。園區寬闊是小孩放電好地方。霞池倒影雪景如夢幻。", map: "https://www.google.com/maps/search/?api=1&query=Kenrokuen+Garden" },
+                { name: "金澤城公園散策", time: "11:00", price: "大人 ¥320 / 小孩 ¥100", desc: "就在兼六園對面。五十間長屋展現精湛木造工法。白雪覆蓋護城河充滿歷史張力。欣賞修復後的石牆設計。", map: "https://www.google.com/maps/search/?api=1&query=Kanazawa+Castle+Park" },
+                { name: "21 世紀美術館", time: "14:00", price: "大人 ¥450+ / 小 免費", desc: "著名的「游泳池」展品可讓人在水底下互動。館外圓球裝置藝術也非常好拍。是一場創意與互動兼具的美術館巡禮。", map: "https://www.google.com/maps/search/?api=1&query=21st+Century+Museum+of+Contemporary+Art" },
+                { name: "近江町市場 (晚餐)", time: "16:30", price: "自行花費", desc: "金澤廚房。品嚐著名的加能蟹與壽司。雖然市場收攤但餐廳依然熱鬧。海鮮丼飯用料豐富。別忘了買當季草莓享用。", map: "https://www.google.com/maps/search/?api=1&query=Omicho+Market" }
+            ]},
+            { day: 5, date: "1/20 (二)", title: "高岡哆啦A夢行程", style: "day-card-blue", spots: [
+                { name: "高岡市美術館 (畫廊)", time: "10:00", price: "大人 ¥500 / 小孩 ¥300", desc: "藤子·F·不二雄故鄉。看到原稿與珍貴畫作，找回童年夢想。出口有許多限定精品，大人小孩都會瘋狂的地方。", map: "https://www.google.com/maps/search/?api=1&query=Takaoka+Art+Museum" },
+                { name: "御伽之森公園 (空地)", time: "12:00", price: "免費", desc: "還原漫畫空地水泥管場景。雪中與哆啦A夢塑像合照。室內科學館有遊戲區。這對家庭客是最幸福的打卡點。", map: "https://www.google.com/maps/search/?api=1&query=Takaoka+Otogi+no+Mori+Park" },
+                { name: "高岡大佛巡禮", time: "14:00", price: "免費", desc: "日本三大佛之一。青銅佛像在雪日中莊嚴。位於市中心可參觀底座了解歷史。體會高岡精湛金屬工藝與宗教氣息。", map: "https://www.google.com/maps/search/?api=1&query=Takaoka+Daibutsu" },
+                { name: "金澤螃蟹盛宴", time: "18:00", price: "預估 ¥10,000+", desc: "回到金澤螃蟹大餐。加能蟹肉質甜美。不論炭火烤或是火鍋，都是巔峰享受。建議提前預約弁吉滿足口腹之慾。", map: "https://www.google.com/maps/search/?api=1&query=Kanazawa+Crab+Restaurant" }
+            ]},
+            { day: 6, date: "1/21 (三)", title: "茶屋文化與探險", style: "day-card-orange", spots: [
+                { name: "東茶屋街散策", time: "09:30", price: "免費", desc: "感受江戶氣息。古老房屋與石板路在雪中極美。必買箔一金箔冰淇淋。這裡是拍攝全家照的絕佳場景。", map: "https://www.google.com/maps/search/?api=1&query=Higashi+Chaya+District" },
+                { name: "忍者寺 (妙立寺)", time: "13:30", price: "大 ¥1,000 / 小 ¥700", desc: "需預約。充滿暗門地道陷阱。導覽趣味性高（提供中文手冊），了解藩主亂世智慧。小孩會被機關深深吸引。", map: "https://www.google.com/maps/search/?api=1&query=Myoryuji+Temple" },
+                { name: "長町武家屋敷", time: "15:30", price: "大人 ¥550 / 小孩 ¥300", desc: "昔日武士區。土牆覆蓋稻草景象獨特。參觀野村家遺址，庭園獲盛讚，雪中寧靜深沉，展現武士極致美學。", map: "https://www.google.com/maps/search/?api=1&query=Nagamachi+Samurai+District" },
+                { name: "金澤百貨購物衝刺", time: "17:30", price: "自行花費", desc: "離開金澤前在車站百貨採買。推薦 morimori 壽司。挑選金澤限定精品和菓子，為回程移動做好糧食儲備。", map: "https://www.google.com/maps/search/?api=1&query=Kanazawa+Forus" }
+            ]},
+            { day: 7, date: "1/22 (四)", title: "大移動・更換大車", style: "day-card-green", spots: [
+                { name: "金澤回空港 (3.5hr)", time: "10:00", price: "免費", desc: "移動日。雪地開車請定速巡航。穿越雪山隧道，景致震撼。保持安全車距，享受自駕旅行獨有的視覺洗禮。", map: "https://www.google.com/maps/search/?api=1&query=Kanazawa+to+Centrair" },
+                { name: "養老 SA 休息站", time: "14:00", price: "自行花費", desc: "歷史感休息站，品嚐養老水。伸展駕駛肌肉，買特色小餅乾，讓小孩活動筋骨。緩解長途乘車的疲勞感。", map: "https://www.google.com/maps/search/?api=1&query=Yoro+Service+Area" },
+                { name: "空港換車 (19:30)", time: "19:30", price: "免費", desc: "回到空港。Orix 還車，Toyota 領 7 人座大型車。增加購物與移動空間，讓全家接下來更舒適。", map: "https://www.google.com/maps/search/?api=1&query=Toyota+Rent+a+Car+Centrair" },
+                { name: "抵達蟹江飯店", time: "21:00", price: "免費", desc: "入宿休息。鄰近高速道路方便明早前往樂園。晚餐選擇連鎖食堂，早點休息為樂高樂園日儲備體力。", map: "https://www.google.com/maps/search/?api=1&query=Leisure+Hotel+Kanie" }
+            ]},
+            { day: 8, date: "1/23 (五)", title: "樂高樂園親子全日", style: "day-card-pink", spots: [
+                { name: "日本樂高樂園", time: "10:00", price: "大 ¥5,500+ / 小 ¥3,800+", desc: "親子行程重頭戲！設施色彩豐富。Miniland 樂高微縮日本絕對震撼。小孩忘記時間的天堂。參觀工廠領限定積木。", map: "https://www.google.com/maps/search/?api=1&query=LEGOLAND+Japan" },
+                { name: "磁浮鐵道館", time: "15:30", price: "大人 ¥1,000 / 小孩 ¥500", desc: "就在樂高旁。展示最尖端技術與新幹線實體。火車迷與小孩會愛上這裡的駕駛模擬器。室內不受寒風影響。", map: "https://www.google.com/maps/search/?api=1&query=SCMAGLEV+and+Railway+Park" },
+                { name: "Maker's Pier 晚餐", time: "18:00", price: "自行花費", desc: "樂高門口美食廊。享用名物地雞或鰻魚飯。造景異國風，全家合影好點。也能體驗樂高造型美食。", map: "https://www.google.com/maps/search/?api=1&query=Makers+Pier" },
+                { name: "金城碼頭夜景", time: "20:00", price: "免費", desc: "步至碼頭看摩天輪夜景。夜晚名古屋海邊靜謐美感，隨後開車返回。親子共度時光中最放鬆時刻。", map: "https://www.google.com/maps/search/?api=1&query=Kinjofuto+Nagoya" }
+            ]},
+            { day: 9, date: "1/24 (六)", title: "岐阜城與松鼠體驗", style: "day-card-blue", spots: [
+                { name: "岐阜城 (纜車往返)", time: "10:00", price: "大人 ¥1,100 / 小孩 ¥550", desc: "搭纜車看長良川全景。城堡氣勢磅礡，展示戰國文物。頂樓展望台雪景河谷景觀壯麗，深度歷史教育點。", map: "https://www.google.com/maps/search/?api=1&query=Gifu+Castle" },
+                { name: "金華山松鼠村", time: "11:30", price: "入場費 ¥200", desc: "纜車站旁小孩最愛！戴手套餵松鼠。溫馴好拍，最棒互動時刻。迷你但溫馨的親子行程，拍照成功率極高。", map: "https://www.google.com/maps/search/?api=1&query=Kinkazan+Squirrel+Village" },
+                { name: "川原町老街", time: "13:30", price: "免費", desc: "古樸歷史街道。購買岐阜手工雨傘。雪中老街少人群更有質感。尋找隱藏甜點店，享受日式慢活節奏。", map: "https://www.google.com/maps/search/?api=1&query=Kawaramachi+Gifu" },
+                { name: "入住羽島民宿", time: "16:00", price: "免費", desc: "體驗深度日本。空間寬闊適合放鬆。去超市採購食材在民宿料理，享受家庭溫馨時光，換個居家旅遊節奏。", map: "https://www.google.com/maps/search/?api=1&query=ligara-60+Takehanacho" }
+            ]},
+            { day: 10, date: "1/25 (日)", title: "滑雪場戲雪大戰", style: "day-card-orange", spots: [
+                { name: "奧伊吹滑雪場 (戲雪)", time: "09:30", price: "大 ¥2,000 / 小 ¥1,000", desc: "專業玩雪！提供雪盆輸送帶。小孩在雪中翻滾是大人的樂趣。穿戴全套防水裝備。雪場內熱食豐富暖心。", map: "https://www.google.com/maps/search/?api=1&query=Gransnow+Okuibuki" },
+                { name: "滑雪場 Kids Park", time: "12:00", price: "包含於戲雪費", desc: "專屬樂園。工具一應俱全。行程中積雪最深處，玩雪過癮。挑戰雪盆滑坡，全家共享尖叫與歡笑。", map: "https://www.google.com/maps/search/?api=1&query=Okuibuki+Kids+Park" },
+                { name: "羽島 Costco 補給", time: "16:00", price: "自行花費", desc: "順路前往。買限定熟食飲品回民宿派對。Costco 對自駕家庭極度友善。CP值超高晚餐首選。", map: "https://www.google.com/maps/search/?api=1&query=Costco+Gifu+Hashima" },
+                { name: "大垣城點燈外觀", time: "18:00", price: "免費", desc: "回程看點燈。安靜美麗小點，適合停留拍照回味。大垣市具質感，是結束今日冒險的平靜收尾。", map: "https://www.google.com/maps/search/?api=1&query=Ogaki+Castle" }
+            ]},
+            { day: 11, date: "1/26 (一)", title: "科技與巧克力探險", style: "day-card-green", spots: [
+                { name: "豐田汽車博物館", time: "10:00", price: "大人 ¥1,200 / 小孩 ¥600", desc: "名車進化史展館。展場設計宏偉即便不是車迷也驚嘆。館內豐田咖哩飯必吃，讓小孩了解工業發展。", map: "https://www.google.com/maps/search/?api=1&query=Toyota+Automobile+Museum" },
+                { name: "雷神巧克力工廠店", time: "14:00", price: "自行花費", desc: "位於豐橋。買巨大版或限定雷神。巧克力天堂適合採購伴手禮。工廠店常有獨家驚喜口味，絕對滿載而歸。", map: "https://www.google.com/maps/search/?api=1&query=Yuraku+Confectionery+Toyohashi" },
+                { name: "豐橋公園放空", time: "16:00", price: "免費", desc: "放慢節奏觀察當地生活。開車回民宿整理行李。欣賞日本鄉間黃昏，感受北陸自駕行接近尾聲的滿足感。", map: "https://www.google.com/maps/search/?api=1&query=Toyohashi+Park" },
+                { name: "預備：長久手溫泉", time: "18:00", price: "大人 ¥800 / 小孩 ¥400", desc: "推薦「花之湯」。帶走駕駛疲勞。洗完喝瓶牛奶最高享受。設施現代乾淨。給身體最好的犒賞收尾。", map: "https://www.google.com/maps/search/?api=1&query=Nagakute+Onsen" }
+            ]},
+            { day: 12, date: "1/27 (二)", title: "科學館與最後購買", style: "day-card-pink", spots: [
+                { name: "名古屋市科學館", time: "10:00", price: "大人 ¥800 / 小生 免費", desc: "世界最大球體天文館。互動科學天堂小孩玩上一整天都不膩。建議提早到場領券。內容充實且具啟發性。", map: "https://www.google.com/maps/search/?api=1&query=Nagoya+City+Science+Museum" },
+                { name: "大須最後購物", time: "13:30", price: "自行花費", desc: "名古屋秋葉原。掃貨最後時機。參拜觀音寺祈求平安，品嚐地道鯛魚燒與炸雞。做回國前的最後衝刺採購。", map: "https://www.google.com/maps/search/?api=1&query=Osu+Shopping+District" },
+                { name: "還車與入住飯店", time: "19:00", price: "免費", desc: "機場加油還車入住東橫INN。飯店有秤重計，仔細整理箱子確保安全。回味這 12 天的豐富共遊時光。", map: "https://www.google.com/maps/search/?api=1&query=Toyoko+Inn+Centrair" },
+                { name: "機場展望台夜觀", time: "21:00", price: "免費", desc: "離日前最後觀機。夜晚航廈獨特魅力。買些超商甜點在房間享受最後日本夜，為旅程完美總結。", map: "https://www.google.com/maps/search/?api=1&query=Centrair+Sky+Deck" }
+            ]},
+            { day: 13, date: "1/28 (三)", title: "珍重再見", style: "day-card-blue", spots: [
+                { name: "免稅店伴手禮衝刺", time: "08:00", price: "自行花費", desc: "名古屋蝦餅、赤福、金箔蛋糕收尾。13 天旅程將成為全家最暖記憶。帶著滿滿戰利品踏上回程航程。", map: "https://www.google.com/maps/search/?api=1&query=Centrair+Duty+Free" },
+                { name: "CI151 返回桃園 (09:50)", time: "09:50", price: "免費", desc: "告別雪國。航程中回味照片。約 12:15 抵達桃園。高品質親子之旅圓滿結束，平安是最好歸宿。", map: "https://www.google.com/maps/search/?api=1&query=Taoyuan+International+Airport" },
+                { name: "落地桃園機場", time: "13:00", price: "免費", desc: "領行李回家。整理美照戰利品。結束 13 天高品質冒險。規劃下一次探險！感謝規劃這場夢幻行。", map: "https://www.google.com/maps/search/?api=1&query=Home+Sweet+Home" },
+                { name: "照片備份與整理", time: "15:00", price: "免費", desc: "平安在家回味。將這段珍貴親子自駕時光備份，照片將永存心中。這次北陸行全家收穫滿滿。", map: "https://www.google.com/maps/search/?api=1&query=Taoyuan+Terminal+2" }
+            ]}
+        ];
+
+        const foodData = [
+            { name: "もりもり寿し (迴轉壽司)", region: "kanazawa", cate: "meal", budget: "¥3,500/人", desc: "金澤最強名店。喉黑魚必點。", link: "https://www.google.com/maps/search/?api=1&query=Morimori+Sushi+Kanazawa" },
+            { name: "丸明 (飛驒牛燒肉)", region: "takayama", cate: "meal", budget: "¥5,000/人", desc: "CP值最高燒肉，入口即化。", link: "https://www.google.com/maps/search/?api=1&query=Maruaki+Takayama" },
+            { name: "弁吉 (螃蟹吃到飽)", region: "kanazawa", cate: "meal", budget: "¥12,000/人", desc: "當季螃蟹大餐，無限享用。", link: "https://www.google.com/maps/search/?api=1&query=Benkichi+Kanazawa" },
+            { name: "蓬萊軒 鰻魚飯", region: "nagoya", cate: "meal", budget: "¥4,800/人", desc: "鰻魚三吃創始店，排隊也值。", link: "https://www.google.com/maps/search/?api=1&query=Atsuta+Horaiken" },
+            { name: "世界的山將 雞翅", region: "nagoya", cate: "snack", budget: "¥2,000/人", desc: "胡椒辛香宵夜首選。", link: "https://www.google.com/maps/search/?api=1&query=Sekai+no+Yamachan" },
+            { name: "麵屋大河 (味噌拉麵)", region: "kanazawa", cate: "meal", budget: "¥1,200/人", desc: "金澤第一拉麵，冬季救星。", link: "https://www.google.com/maps/search/?api=1&query=Menya+Taiga" },
+            { name: "箔一 金箔冰淇淋", region: "kanazawa", cate: "dessert", budget: "¥900/份", desc: "奢華打卡點心。", link: "https://www.google.com/maps/search/?api=1&query=Hakuichi+Kanazawa" },
+            { name: "矢場豚 味噌豬排", region: "nagoya", cate: "meal", budget: "¥2,000/人", desc: "濃厚味噌白飯殺手。", link: "https://www.google.com/maps/search/?api=1&query=Yabaton" },
+            { name: "白海老亭 (白蝦)", region: "kanazawa", cate: "meal", budget: "¥2,500/人", desc: "富山灣寶石極致鮮甜。", link: "https://www.google.com/maps/search/?api=1&query=Shiroebiya+Toyama" },
+            { name: "高山 Kotte 牛壽司", region: "takayama", cate: "snack", budget: "¥1,000/份", desc: "仙貝上的排隊美味。", link: "https://www.google.com/maps/search/?api=1&query=Hida+Kotte+Ushi" },
+            { name: "山本屋總本家 (烏龍)", region: "nagoya", cate: "meal", budget: "¥2,500/人", desc: "味噌煮込，嚼勁厚實。", link: "https://www.google.com/maps/search/?api=1&query=Yamamotoya+Souhonke" },
+            { name: "高山布丁亭", region: "takayama", cate: "dessert", budget: "¥500/份", desc: "滑順細緻可愛瓶裝。", link: "https://www.google.com/maps/search/?api=1&query=PuddingTei+Takayama" },
+            { name: "味處 高崎 (蟹)", region: "kanazawa", cate: "meal", budget: "¥10,000/人", desc: "精緻蟹套餐優雅體驗。", link: "https://www.google.com/maps/search/?api=1&query=Ajidokoro+Takasaki" },
+            { name: "壽賀喜屋", region: "nagoya", cate: "snack", budget: "¥800/人", desc: "平價之光，配冰淇淋。", link: "https://www.google.com/maps/search/?api=1&query=Sugakiya+Nagoya" },
+            { name: "味仙 (台灣拉麵)", region: "nagoya", cate: "meal", budget: "¥1,500/人", desc: "辛辣過癮名古屋名物。", link: "https://www.google.com/maps/search/?api=1&query=Misen+Nagoya" },
+            { name: "大須鯛魚燒", region: "nagoya", cate: "dessert", budget: "¥300/份", desc: "皮脆餡滿暖手點心。", link: "https://www.google.com/maps/search/?api=1&query=Osu+Taiyaki" },
+            { name: "近江町海鮮丼", region: "kanazawa", cate: "meal", budget: "¥3,000/人", desc: "每日直送海味滿點。", link: "https://www.google.com/maps/search/?api=1&query=Omicho+Don" },
+            { name: "星乃咖啡 早餐", region: "nagoya", cate: "dessert", budget: "¥1,200/人", desc: "咖啡送吐司早晨文化。", link: "https://www.google.com/maps/search/?api=1&query=Hoshino+Coffee" },
+            { name: "金澤關東煮 (赤目)", region: "kanazawa", cate: "snack", budget: "¥2,500/人", desc: "蟹面車麩鮮甜暖胃。", link: "https://www.google.com/maps/search/?api=1&query=Kanazawa+Oden" },
+            { name: "熱田雞肉飯", region: "nagoya", cate: "meal", budget: "¥1,800/人", desc: "Q彈交趾雞層次豐富。", link: "https://www.google.com/maps/search/?api=1&query=Atsuta+Chicken" },
+            { name: "羽島 Costco 熟食", region: "nagoya", cate: "snack", budget: "¥1,500/人", desc: "民宿派對最高 CP 值。", link: "https://www.google.com/maps/search/?api=1&query=Costco+Hashima" },
+            { name: "大和百貨蟹便當", region: "kanazawa", cate: "snack", budget: "¥2,000/份", desc: "高品質奢華便當提案。", link: "https://www.google.com/maps/search/?api=1&query=Daiwa+Food" },
+            { name: "雷神巧克力工廠", region: "nagoya", cate: "snack", budget: "¥1,000/人", desc: "限定巧克力採購天堂。", link: "https://www.google.com/maps/search/?api=1&query=Yuraku+Gift" },
+            { name: "海膳木 餐包", region: "nagoya", cate: "snack", budget: "¥800/份", desc: "機場人氣伴手結尾。", link: "https://www.google.com/maps/search/?api=1&query=Centrair+Food" },
+            { name: "Maker's Pier 餐廳", region: "nagoya", cate: "meal", budget: "¥3,000/人", desc: "樂高門口親子友善。", link: "https://www.google.com/maps/search/?api=1&query=Makers+Pier" },
+            { name: "高山味噌團子", region: "takayama", cate: "snack", budget: "¥200/串", desc: "現烤香氣老街經典。", link: "https://www.google.com/maps/search/?api=1&query=Takayama+Dango" },
+            { name: "富山 Black 拉麵", region: "kanazawa", cate: "meal", budget: "¥1,100/人", desc: "濃厚黑醬油，富山代表。", link: "https://www.google.com/maps/search/?api=1&query=Toyama+Black+Ramen" },
+            { name: "金澤咖哩冠軍", region: "kanazawa", cate: "meal", budget: "¥900/人", desc: "黑濃咖哩配豬排。", link: "https://www.google.com/maps/search/?api=1&query=Kanazawa+Curry" },
+            { name: "Komeda's Coffee", region: "nagoya", cate: "dessert", budget: "¥1,000/人", desc: "名古屋早餐代名詞。", link: "https://www.google.com/maps/search/?api=1&query=Komeda+Coffee" },
+            { name: "風來坊 雞翅", region: "nagoya", cate: "snack", budget: "¥2,000/人", desc: "元祖炸雞翅之爭。", link: "https://www.google.com/maps/search/?api=1&query=Furaibou+Nagoya" },
+            { name: "Osu 炸雞", region: "nagoya", cate: "snack", budget: "¥600/份", desc: "大須商圈散步美食。", link: "https://www.google.com/maps/search/?api=1&query=Osu+Fried+Chicken" },
+            { name: "白川鄉 五平餅", region: "takayama", cate: "snack", budget: "¥300/份", desc: "合掌村傳統點心。", link: "https://www.google.com/maps/search/?api=1&query=ShirakawaGo+GoheiMochi" }
+        ];
+
+        const stayInfo = [
+            { date: "Day 1, 12", name: "東橫INN 中部國際機場 1號店", addr: "愛知県常滑市セントレア4-2-5", tel: "0569-38-0045" },
+            { date: "Day 2", name: "高山八兵衛日式旅館", addr: "岐阜県高山市上岡本町1-388", tel: "0577-35-3811" },
+            { date: "Day 3-6", name: "金澤城堡酒店", addr: "石川県金沢市此花町10-17", tel: "076-223-2233" },
+            { date: "Day 7-8", name: "Leisure Hotel Kanie", addr: "愛知県海部郡蟹江町源氏2-3", tel: "N/A" },
+            { date: "Day 9-11", name: "岐阜羽島 民宿", addr: "Ligara-60 Takehanacho, Hashima", tel: "N/A" }
+        ];
+
+        const ytLinks = [
+            { title: "北陸冬季攻略 [2024 日本旅遊]", id: "oXjI9Vi-XcY", detail: "合掌村點燈、老街朝市美食攻略。" },
+            { title: "白川鄉：夢幻雪白遺產一日遊", id: "5ZC90dbbmGY", detail: "實測參觀合掌屋與美食分享。" },
+            { title: "北陸小京都金澤自由行攻略", id: "Yn-l5hrIVuI", detail: "市場、金澤城與東茶屋街必訪。" },
+            { title: "最美的金澤夢幻雪吊紀錄", id: "OVjCdHuOuMA", detail: "冬季兼六園畫面紀錄預習。" },
+            { title: "日本中部自駕 8 天 7 夜攻略", id: "f8Pog89Fx_Y", detail: "自駕美食與景點安排深度細節。" },
+            { title: "飛驒高山攻略：散策指南", id: "0eQrwHVN3zo", detail: "高山老街與散步路線詳細分享。" },
+            { title: "名古屋 EP8 親子景點全攻略", id: "mZSIqFjlGN8", detail: "樂高樂園與磁浮館必看指南。" },
+            { title: "鐵道迷朝聖：名古屋磁浮館", id: "-Qb33i8lWiE", detail: "設施實測與小孩駕駛模擬體驗。" },
+            { title: "名古屋市科學館親子遊體驗", id: "T9WCIQUbAlM", detail: "世界最大天文館互動科學秀。" },
+            { title: "高岡哆啦A夢行程景點巡禮", id: "8cx0V_7O-gA", detail: "御伽之森公園與故鄉畫廊全錄。" }
+        ];
+
+        // --- RENDER ---
+        function renderFood() {
+            const grid = document.getElementById('food-grid');
+            const filtered = foodData.filter(f => 
+                (currentRegion === 'all' || f.region === currentRegion) &&
+                (currentCate === 'all' || f.cate === currentCate)
+            );
+            grid.innerHTML = filtered.map(f => `
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 hover:border-blue-600 transition group">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${f.region}</span>
+                        <span class="bg-blue-100 text-blue-800 text-[10px] font-black px-3 py-1 rounded-full">${f.budget}</span>
+                    </div>
+                    <h4 class="font-bold text-slate-800 mb-2 group-hover:text-blue-700 transition text-lg">${f.name}</h4>
+                    <p class="text-xs text-slate-500 mb-5 line-clamp-2">${f.desc}</p>
+                    <a href="${f.link}" target="_blank" rel="noopener noreferrer" class="text-xs font-black text-blue-600 flex items-center gap-1">
+                        <i class="fa-solid fa-map-pin"></i> 導航位置
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        function filterRegion(reg) {
+            currentRegion = reg;
+            document.querySelectorAll('.region-btn').forEach(btn => btn.classList.remove('filter-active'));
+            event.target.classList.add('filter-active');
+            renderFood();
+        }
+
+        function filterCate(cat) {
+            currentCate = cat;
+            document.querySelectorAll('.cate-btn').forEach(btn => btn.classList.remove('filter-active'));
+            event.target.classList.add('filter-active');
+            renderFood();
+        }
+
+        function renderStay() {
+            const container = document.getElementById('stay-list');
+            container.innerHTML = stayInfo.map(s => `
+                <div class="flex items-start gap-5 p-6 rounded-[2.5rem] bg-slate-50 border border-slate-100 transition shadow-sm">
+                    <div class="bg-blue-900 text-white p-2 rounded-xl h-fit font-black text-xs whitespace-nowrap">${s.date}</div>
+                    <div class="flex-1">
+                        <p class="font-bold text-slate-800 text-lg">${s.name}</p>
+                        <p class="text-xs text-slate-500 mt-2 font-medium font-mono">${s.addr}</p>
+                        <p class="text-xs text-slate-600 mt-1 font-bold italic">Tel: ${s.tel || 'N/A'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderYT() {
+            const grid = document.getElementById('yt-grid');
+            grid.innerHTML = ytLinks.map(v => `
+                <a href="http://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener noreferrer" class="group block bg-white rounded-[2.5rem] p-5 shadow-sm border border-slate-100 hover:shadow-2xl transition">
+                    <div class="aspect-video bg-slate-100 rounded-3xl mb-4 overflow-hidden relative shadow-inner">
+                        <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Video">
+                        <div class="absolute inset-0 bg-black/10 transition flex items-center justify-center">
+                            <i class="fa-solid fa-circle-play text-5xl text-white/90 shadow-2xl"></i>
+                        </div>
+                    </div>
+                    <h5 class="font-bold text-base text-slate-800 leading-snug group-hover:text-blue-700 transition">${v.title}</h5>
+                    <p class="text-[10px] text-slate-400 mt-3 font-bold italic">${v.detail}</p>
+                </a>
+            `).join('');
+        }
+
+        window.onload = () => {
+            const renderItinerary = () => {
+                const container = document.getElementById('itinerary-grid');
+                container.innerHTML = dayData.map(d => `
+                    <div class="relative pl-12">
+                        <div class="absolute left-0 top-0 w-10 h-10 rounded-full bg-blue-900 text-white flex items-center justify-center font-black z-10 text-sm shadow-md border-2 border-white">
+                            ${d.day}
+                        </div>
+                        <div class="${d.style} rounded-[3rem] p-8 shadow-sm mb-6 border-b-4 border-slate-200">
+                            <h3 class="text-2xl font-black text-slate-800 mb-8">${d.date} | ${d.title}</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-slate-800">
+                                ${d.spots.map(s => `
+                                    <div class="bg-white/80 p-6 rounded-[2rem] border border-white flex flex-col justify-between shadow-sm hover:shadow-lg transition">
+                                        <div>
+                                            <div class="flex justify-between items-start mb-4">
+                                                <span class="text-xs font-bold text-blue-700 font-mono tracking-tighter">${s.time}</span>
+                                                <span class="ticket-box">門票：${s.price}</span>
+                                            </div>
+                                            <h4 class="font-bold text-slate-900 mb-3 text-lg">${s.name}</h4>
+                                            <p class="desc-text text-[13px] font-medium leading-relaxed">${s.desc}</p>
+                                        </div>
+                                        <div class="mt-6 pt-4 border-t border-slate-200/50 flex justify-end">
+                                            <a href="${s.map}" target="_blank" rel="noopener noreferrer" class="text-xs font-black text-blue-600 flex items-center gap-1 hover:underline">
+                                                <i class="fa-solid fa-location-arrow"></i> 開啟地圖
+                                            </a>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            };
+
+            const initCharts = () => {
+                const ctxType = document.getElementById('typeChart').getContext('2d');
+                new Chart(ctxType, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['樂園/科學', '歷史古蹟', '雪地玩雪', '美食購物'],
+                        datasets: [{ data: [40, 20, 20, 20], backgroundColor: ['#1E3A8A', '#B45309', '#0EA5E9', '#EC4899'], borderWidth: 0 }]
+                    },
+                    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { weight: 'bold', size: 11 } } } } }
+                });
+
+                const ctxBud = document.getElementById('budgetChart').getContext('2d');
+                new Chart(ctxBud, {
+                    type: 'bar',
+                    data: {
+                        labels: ['D1-D3', 'D4-D6', 'D7-D9', 'D10-D13'],
+                        datasets: [{ label: '人均餐費', data: [5000, 10000, 6000, 5000], backgroundColor: '#1E3A8A', borderRadius: 10 }]
+                    },
+                    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+            };
+
+            renderItinerary();
+            renderFood();
+            renderStay();
+            renderYT();
+            initCharts();
+        };
+    </script>
+</body>
+</html>
